@@ -1,0 +1,23 @@
+export const BOOK_CATEGORIES = [
+  'Fiction',
+  'Non-Fiction',
+  'Science',
+  'Technology',
+  'Biography',
+  'History',
+  'Philosophy',
+  'Art',
+  'Religion',
+  'Self-Help',
+  'Romance',
+  'Mystery',
+  'Fantasy',
+  'Science Fiction',
+  'Horror',
+  'Thriller',
+  'Children',
+  'Young Adult',
+  'Poetry',
+  'Drama',
+  'Other'
+];
