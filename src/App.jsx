@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { BookIcon } from 'lucide-react'
 import {
   Plus,
   BarChart3,
@@ -10,6 +12,7 @@ import {
 
 import { loadBooks, saveBooks } from './utils/localStorage';
 
+import './App.css';
 
 import BookCard from './components/BookCard';
 import BookForm from './components/BookForm';
@@ -30,15 +33,17 @@ function App() {
   const [currentView, setCurrentView] = useState('library');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Load books on first render
   useEffect(() => {
-  if (books.length > 0) {
-    saveBooks(books);
-  }
-}, [books]);
+    const storedBooks = loadBooks();
+    setBooks(storedBooks);
+  }, []);
 
   // Save to localStorage whenever books change
   useEffect(() => {
-    saveBooks(books);
+    if (books.length > 0) {
+      saveBooks(books);
+    }
   }, [books]);
 
   const filteredBooks = books.filter((book) => {
@@ -156,10 +161,7 @@ function App() {
               </button>
             </div>
 
-            <SearchBar
-              value={searchTerm}
-              onChange={setSearchTerm}
-            />
+            <SearchBar value={searchTerm} onChange={setSearchTerm} />
 
             {filteredBooks.length === 0 ? (
               <div className="text-center py-12">
@@ -219,13 +221,13 @@ function App() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}
       >
-        <div className="p-6">
-          <div className="flex items-center mb-8">
-            <BookOpen className="w-8 h-8 text-blue-500 mr-3" />
-            <h1 className="text-xl font-bold text-gray-900">
-              BookLibrary
-            </h1>
-          </div>
+      <div className="p-6 overflow-y-auto max-h-screen">
+  <div className="flex items-center mb-8">
+    <Link to="/library" className="flex items-center space-x-2 text-blue-600 hover:underline">
+      <BookOpen className="w-8 h-8 text-blue-500 mr-2" />
+      <span className="text-xl font-bold text-gray-900">BookLibrary</span>
+    </Link>
+  </div>
 
           <nav className="space-y-2">
             {menuItems.map((item) => (
@@ -292,6 +294,7 @@ function App() {
         />
       )}
     </div>
+    
   );
 }
 
