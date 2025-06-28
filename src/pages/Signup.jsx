@@ -10,7 +10,7 @@ import {
   sendSignInLinkToEmail
 } from "firebase/auth";
 import { auth } from "../auth/firebase";
-import { BookOpen, Mail, Lock, Eye, EyeOff, Phone, Smartphone, ArrowLeft, CheckCircle } from "lucide-react";
+import { BookOpen, Mail, Lock, Eye, EyeOff, Phone, Smartphone, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import OTPInput from "../components/OTPInput";
 import PhoneInput from "../components/PhoneInput";
 
@@ -120,7 +120,11 @@ const Signup = () => {
       setStep('email-otp-sent');
     } catch (err) {
       console.error('Email OTP signup error:', err);
-      setError("Failed to send email OTP. Please try again.");
+      if (err.code === "auth/unauthorized-continue-uri") {
+        setError("Email OTP is not properly configured. Please contact support or try a different signup method.");
+      } else {
+        setError("Failed to send email OTP. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -138,7 +142,9 @@ const Signup = () => {
       setStep('otp');
     } catch (err) {
       console.error('Phone signup error:', err);
-      if (err.code === "auth/too-many-requests") {
+      if (err.code === "auth/billing-not-enabled") {
+        setError("Phone authentication is not available. Please use email signup instead.");
+      } else if (err.code === "auth/too-many-requests") {
         setError("Too many requests. Please try again later.");
       } else if (err.code === "auth/invalid-phone-number") {
         setError("Invalid phone number format. Please check and try again.");
@@ -367,6 +373,26 @@ const Signup = () => {
           Phone
         </button>
       </div>
+
+      {/* Configuration Notice */}
+      {(signupMethod === 'email-otp' || signupMethod === 'phone') && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <h4 className="text-sm font-medium text-amber-800 mb-1">
+                {signupMethod === 'phone' ? 'Phone Authentication Notice' : 'Email OTP Notice'}
+              </h4>
+              <p className="text-sm text-amber-700">
+                {signupMethod === 'phone' 
+                  ? 'Phone authentication requires Firebase billing to be enabled. If you encounter issues, please use email signup instead.'
+                  : 'Email OTP requires proper domain configuration. If you encounter issues, please use regular email signup instead.'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Email Signup Form */}
       {signupMethod === 'email' && (
