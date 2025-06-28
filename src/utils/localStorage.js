@@ -1,12 +1,12 @@
-const STORAGE_KEY = 'bookLibrary';
+const STORAGE_KEY = 'books';
 
 export const loadBooks = () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : getSampleBooks();
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Error loading books from localStorage:', error);
-    return getSampleBooks();
+    return [];
   }
 };
 
@@ -17,7 +17,6 @@ export const saveBooks = (books) => {
     console.error('Error saving books to localStorage:', error);
   }
 };
-
 export const generateId = () => {
   return Math.random().toString(36).substr(2, 9);
 };

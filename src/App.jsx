@@ -1,138 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { BookIcon } from 'lucide-react'
-import {
-  Plus,
-  BarChart3,
-  History,
-  BookOpen,
-  Menu,
-  X
-} from 'lucide-react';
+import { Routes, Route, useLocation, Navigate, Link } from 'react-router-dom';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import ProtectedRoute from './auth/ProtectedRoute';
 
-import { loadBooks, saveBooks } from './utils/localStorage';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
 
-import './App.css';
-
+import Navbar from './components/Navbar';
+import SearchBar from './components/SearchBar';
+import CategoryFilter from './components/CategoryFilter';
+import Statistics from './components/Statistics';
+import BorrowingHistory from './components/BorrowingHistory';
 import BookCard from './components/BookCard';
 import BookForm from './components/BookForm';
 import BorrowForm from './components/BorrowForm';
-import SearchBar from './components/SearchBar';
-import CategoryFilter from './components/CategoryFilter';
-import BorrowingHistory from './components/BorrowingHistory';
-import Statistics from './components/Statistics';
 
-function App() {
-  const [books, setBooks] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [showBookForm, setShowBookForm] = useState(false);
-  const [showBorrowForm, setShowBorrowForm] = useState(false);
-  const [editingBook, setEditingBook] = useState(undefined);
-  const [borrowingBook, setBorrowingBook] = useState(undefined);
-  const [currentView, setCurrentView] = useState('library');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+import { loadBooks, saveBooks } from './utils/localStorage';
 
-  // Load books on first render
-  useEffect(() => {
-    const storedBooks = loadBooks();
-    setBooks(storedBooks);
-  }, []);
+import { BookOpen, BarChart3, History, Menu, X } from 'lucide-react';
 
-  // Save to localStorage whenever books change
-  useEffect(() => {
-    if (books.length > 0) {
-      saveBooks(books);
-    }
-  }, [books]);
+import './App.css';
 
-  const filteredBooks = books.filter((book) => {
-    const matchesSearch =
-      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (book.isbn && book.isbn.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesCategory =
-      selectedCategory === '' || book.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleSaveBook = (book) => {
-    if (editingBook) {
-      setBooks((prev) =>
-        prev.map((b) => (b.id === book.id ? book : b))
-      );
-    } else {
-      setBooks((prev) => [...prev, book]);
-    }
-    setShowBookForm(false);
-    setEditingBook(undefined);
-  };
-
-  const handleEditBook = (book) => {
-    setEditingBook(book);
-    setShowBookForm(true);
-  };
-
-  const handleBorrowBook = (book) => {
-    setBorrowingBook(book);
-    setShowBorrowForm(true);
-  };
-
-  const handleConfirmBorrow = (borrowingRecord) => {
-    if (borrowingBook) {
-      setBooks((prev) =>
-        prev.map((book) =>
-          book.id === borrowingBook.id
-            ? {
-                ...book,
-                status: 'borrowed',
-                borrowingHistory: [
-                  ...book.borrowingHistory,
-                  borrowingRecord
-                ]
-              }
-            : book
-        )
-      );
-    }
-    setShowBorrowForm(false);
-    setBorrowingBook(undefined);
-  };
-
-  const handleReturnBook = (book) => {
-    const currentBorrowing = book.borrowingHistory.find(
-      (record) => !record.returnDate
-    );
-
-    if (currentBorrowing) {
-      setBooks((prev) =>
-        prev.map((b) =>
-          b.id === book.id
-            ? {
-                ...b,
-                status: 'available',
-                borrowingHistory: b.borrowingHistory.map((record) =>
-                  record.id === currentBorrowing.id
-                    ? {
-                        ...record,
-                        returnDate: new Date().toISOString()
-                      }
-                    : record
-                )
-              }
-            : b
-        )
-      );
-    }
-  };
-
-  const menuItems = [
-    { id: 'library', label: 'Library', icon: BookOpen },
-    { id: 'statistics', label: 'Statistics', icon: BarChart3 },
-    { id: 'history', label: 'Borrowing History', icon: History }
-  ];
+function AppRoutes({
+  currentUser,
+  books,
+  filteredBooks,
+  setShowBookForm,
+  setEditingBook,
+  handleEditBook,
+  handleBorrowBook,
+  handleReturnBook,
+  searchTerm,
+  setSearchTerm,
+  selectedCategory,
+  setSelectedCategory,
+  currentView,
+  setCurrentView,
+  showBorrowForm,
+  borrowingBook,
+  handleConfirmBorrow,
+  setShowBorrowForm,
+  setBorrowingBook,
+  showBookForm,
+  handleSaveBook
+}) {
+  const location = useLocation();
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
 
   const renderContent = () => {
     switch (currentView) {
@@ -145,18 +59,13 @@ function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  My Library
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  {filteredBooks.length} books found
-                </p>
+                <h1 className="text-3xl font-bold text-gray-900">My Library</h1>
+                <p className="text-gray-600 mt-1">{filteredBooks.length} books found</p>
               </div>
               <button
                 onClick={() => setShowBookForm(true)}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center shadow-sm"
               >
-                <Plus className="w-5 h-5 mr-2" />
                 ➕ Add New Book
               </button>
             </div>
@@ -167,9 +76,7 @@ function App() {
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {books.length === 0
-                    ? 'Welcome to Your Library!'
-                    : 'No Books Found'}
+                  {books.length === 0 ? 'Welcome to Your Library!' : 'No Books Found'}
                 </h3>
                 <p className="text-gray-500 mb-6">
                   {books.length === 0
@@ -204,97 +111,225 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="bg-white p-2 rounded-lg shadow-md"
-        >
-          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </div>
+    <>
+      {!isAuthPage && currentUser && <Navbar />}
+      <Routes>
+        <Route
+          path="/login"
+          element={!currentUser ? <Login /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/signup"
+          element={!currentUser ? <Signup /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              {renderContent()}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={<Navigate to={currentUser ? "/dashboard" : "/login"} replace />}
+        />
+      </Routes>
+    </>
+  );
+}
 
-      {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
-      >
-      <div className="p-6 overflow-y-auto max-h-screen">
-  <div className="flex items-center mb-8">
-    <Link to="/library" className="flex items-center space-x-2 text-blue-600 hover:underline">
-      <BookOpen className="w-8 h-8 text-blue-500 mr-2" />
-      <span className="text-xl font-bold text-gray-900">BookLibrary</span>
-    </Link>
-  </div>
+function App() {
+  const [books, setBooks] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [showBookForm, setShowBookForm] = useState(false);
+  const [showBorrowForm, setShowBorrowForm] = useState(false);
+  const [editingBook, setEditingBook] = useState(undefined);
+  const [borrowingBook, setBorrowingBook] = useState(undefined);
+  const [currentView, setCurrentView] = useState('library');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-          <nav className="space-y-2">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setCurrentView(item.id);
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                  currentView === item.id
-                    ? 'bg-blue-100 text-blue-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
+  const { currentUser } = useAuth();
 
-          {currentView === 'library' && (
-            <div className="mt-8">
-              <CategoryFilter
-                selectedCategory={selectedCategory}
-                onCategoryChange={setSelectedCategory}
-              />
-            </div>
-          )}
+  useEffect(() => {
+    const storedBooks = loadBooks();
+    setBooks(storedBooks);
+  }, []);
+
+  useEffect(() => {
+    saveBooks(books);
+  }, [books]);
+
+  const filteredBooks = books.filter((book) => {
+    const matchesSearch =
+      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (book.isbn && book.isbn.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = selectedCategory === '' || book.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleSaveBook = (book) => {
+    if (editingBook) {
+      setBooks((prev) => prev.map((b) => (b.id === book.id ? book : b)));
+    } else {
+      setBooks((prev) => [...prev, book]);
+    }
+    setShowBookForm(false);
+    setEditingBook(undefined);
+  };
+
+  const handleEditBook = (book) => {
+    setEditingBook(book);
+    setShowBookForm(true);
+  };
+
+  const handleBorrowBook = (book) => {
+    setBorrowingBook(book);
+    setShowBorrowForm(true);
+  };
+
+  const handleConfirmBorrow = (record) => {
+    setBooks((prev) =>
+      prev.map((book) =>
+        book.id === borrowingBook.id
+          ? {
+              ...book,
+              status: 'borrowed',
+              borrowingHistory: [...book.borrowingHistory, record],
+            }
+          : book
+      )
+    );
+    setShowBorrowForm(false);
+    setBorrowingBook(undefined);
+  };
+
+  const handleReturnBook = (book) => {
+    const record = book.borrowingHistory.find((r) => !r.returnDate);
+    if (record) {
+      setBooks((prev) =>
+        prev.map((b) =>
+          b.id === book.id
+            ? {
+                ...b,
+                status: 'available',
+                borrowingHistory: b.borrowingHistory.map((r) =>
+                  r.id === record.id ? { ...r, returnDate: new Date().toISOString() } : r
+                ),
+              }
+            : b
+        )
+      );
+    }
+  };
+
+  const menuItems = [
+    { id: 'library', label: 'Library', icon: BookOpen },
+    { id: 'statistics', label: 'Statistics', icon: BarChart3 },
+    { id: 'history', label: 'Borrowing History', icon: History }
+  ];
+
+  return (
+    <AuthProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Mobile menu toggle */}
+        <div className="lg:hidden fixed top-4 left-4 z-50">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="bg-white p-2 rounded-lg shadow-md">
+            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
+
+        {/* Sidebar */}
+        <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+          <div className="p-6 overflow-y-auto max-h-screen">
+            <Link to="/dashboard" className="flex items-center space-x-2 text-blue-600 hover:underline mb-8">
+              <BookOpen className="w-8 h-8 text-blue-500" />
+              <span className="text-xl font-bold text-gray-900">BookLibrary</span>
+            </Link>
+
+            <nav className="space-y-2">
+              {menuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setCurrentView(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
+                    currentView === item.id
+                      ? 'bg-blue-100 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5 mr-3" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            {currentView === 'library' && (
+              <div className="mt-8">
+                <CategoryFilter selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Overlay for mobile */}
+        {sidebarOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+
+        {/* Main Content */}
+        <div className="lg:ml-64 p-4 lg:p-8">
+          <AppRoutes
+            currentUser={currentUser}
+            books={books}
+            filteredBooks={filteredBooks}
+            setShowBookForm={setShowBookForm}
+            setEditingBook={setEditingBook}
+            handleEditBook={handleEditBook}
+            handleBorrowBook={handleBorrowBook}
+            handleReturnBook={handleReturnBook}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            showBorrowForm={showBorrowForm}
+            borrowingBook={borrowingBook}
+            handleConfirmBorrow={handleConfirmBorrow}
+            setShowBorrowForm={setShowBorrowForm}
+            setBorrowingBook={setBorrowingBook}
+            showBookForm={showBookForm}
+            handleSaveBook={handleSaveBook}
+          />
+        </div>
+
+        {/* Modals */}
+        {showBookForm && (
+          <BookForm
+            book={editingBook}
+            onSave={handleSaveBook}
+            onCancel={() => {
+              setShowBookForm(false);
+              setEditingBook(undefined);
+            }}
+          />
+        )}
+        {showBorrowForm && borrowingBook && (
+          <BorrowForm
+            book={borrowingBook}
+            onBorrow={handleConfirmBorrow}
+            onCancel={() => {
+              setShowBorrowForm(false);
+              setBorrowingBook(undefined);
+            }}
+          />
+        )}
       </div>
-
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Main content */}
-      <div className="lg:ml-64 p-4 lg:p-8">{renderContent()}</div>
-
-      {/* Modals */}
-      {showBookForm && (
-        <BookForm
-          book={editingBook}
-          onSave={handleSaveBook}
-          onCancel={() => {
-            setShowBookForm(false);
-            setEditingBook(undefined);
-          }}
-        />
-      )}
-
-      {showBorrowForm && borrowingBook && (
-        <BorrowForm
-          book={borrowingBook}
-          onBorrow={handleConfirmBorrow}
-          onCancel={() => {
-            setShowBorrowForm(false);
-            setBorrowingBook(undefined);
-          }}
-        />
-      )}
-    </div>
-    
+    </AuthProvider>
   );
 }
 

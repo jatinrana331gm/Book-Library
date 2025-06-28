@@ -3,12 +3,30 @@ import { X, UserCheck } from 'lucide-react';
 import { generateId } from '../utils/localStorage';
 
 const BorrowForm = ({ book, onBorrow, onCancel }) => {
+  // 🔒 Guard: if book is missing, return a fallback UI
+  if (!book) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 text-center">
+          <h2 className="text-xl font-bold text-red-600">No book selected</h2>
+          <p className="text-gray-600 mt-2">Please select a book to borrow.</p>
+          <button
+            onClick={onCancel}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [borrowerName, setBorrowerName] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     const borrowingRecord = {
       id: generateId(),
       borrowerName,

@@ -1,5 +1,12 @@
 import React from 'react';
-import { Book, UserCheck, Calendar, FileText, User, Hash } from 'lucide-react';
+import {
+  Book,
+  UserCheck,
+  Calendar,
+  FileText,
+  User,
+  Hash
+} from 'lucide-react';
 
 const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
   const categoryColors = {
@@ -8,7 +15,7 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
     'Science': 'bg-green-100 text-green-800',
     'Technology': 'bg-gray-100 text-gray-800',
     'Biography': 'bg-yellow-100 text-yellow-800',
-    'History': 'bg-brown-100 text-brown-800',
+    'History': 'bg-yellow-200 text-yellow-900',
     'Philosophy': 'bg-indigo-100 text-indigo-800',
     'Art': 'bg-pink-100 text-pink-800',
     'Religion': 'bg-orange-100 text-orange-800',
@@ -26,14 +33,16 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
     'Other': 'bg-gray-100 text-gray-800'
   };
 
-  const currentBorrowing = book.borrowingHistory.find(record => !record.returnDate);
+  const currentBorrowing = book.borrowingHistory?.find(
+    (record) => !record.returnDate
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group">
       <div className="aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         {book.coverUrl ? (
-          <img 
-            src={book.coverUrl} 
+          <img
+            src={book.coverUrl}
             alt={book.title}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -42,43 +51,55 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
             }}
           />
         ) : null}
-        <div className="w-full h-full flex items-center justify-center" style={{ display: book.coverUrl ? 'none' : 'flex' }}>
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={{ display: book.coverUrl ? 'none' : 'flex' }}
+        >
           <Book className="w-16 h-16 text-blue-400" />
         </div>
       </div>
-      
+
       <div className="p-4">
+        {/* Category and Status */}
         <div className="flex items-start justify-between mb-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[book.category] || 'bg-gray-100 text-gray-800'}`}>
-            {book.category}
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[book.category] || 'bg-gray-100 text-gray-800'}`}
+          >
+            {book.category || 'Unknown'}
           </span>
-          <div className={`w-3 h-3 rounded-full ${book.status === 'available' ? 'bg-green-400' : 'bg-orange-400'}`}></div>
+          <div
+            className={`w-3 h-3 rounded-full ${
+              book.status === 'available' ? 'bg-green-400' : 'bg-orange-400'
+            }`}
+          />
         </div>
-        
+
+        {/* Title */}
         <h3 className="font-bold text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
           {book.title}
         </h3>
-        
+
+        {/* Info */}
         <div className="space-y-1 text-sm text-gray-600 mb-3">
           <div className="flex items-center">
             <User className="w-4 h-4 mr-1" />
             <span className="truncate">{book.author}</span>
           </div>
-          
+
           {book.publishedYear && (
             <div className="flex items-center">
               <Calendar className="w-4 h-4 mr-1" />
               <span>{book.publishedYear}</span>
             </div>
           )}
-          
+
           {book.pages && (
             <div className="flex items-center">
               <FileText className="w-4 h-4 mr-1" />
               <span>{book.pages} pages</span>
             </div>
           )}
-          
+
           {book.isbn && (
             <div className="flex items-center">
               <Hash className="w-4 h-4 mr-1" />
@@ -87,6 +108,7 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
           )}
         </div>
 
+        {/* Borrowing Info */}
         {currentBorrowing && (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-3">
             <div className="flex items-center text-orange-800 text-sm">
@@ -94,10 +116,13 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
               <span className="font-medium">Borrowed by:</span>
             </div>
             <p className="text-orange-700 text-sm font-medium">{currentBorrowing.borrowerName}</p>
-            <p className="text-orange-600 text-xs">Since {new Date(currentBorrowing.borrowDate).toLocaleDateString()}</p>
+            <p className="text-orange-600 text-xs">
+              Since {new Date(currentBorrowing.borrowDate).toLocaleDateString()}
+            </p>
           </div>
         )}
-        
+
+        {/* Buttons */}
         <div className="flex gap-2">
           <button
             onClick={() => onEdit(book)}
@@ -105,7 +130,7 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
           >
             Edit
           </button>
-          
+
           {book.status === 'available' ? (
             <button
               onClick={() => onBorrow(book)}

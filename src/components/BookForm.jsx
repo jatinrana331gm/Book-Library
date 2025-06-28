@@ -58,6 +58,21 @@ const BookForm = ({ book, onSave, onCancel }) => {
     }));
   };
 
+  const handleAddBook = (newBook) => {
+  const newEntry = {
+    ...newBook,
+    id: Date.now(),
+    borrowingHistory: [],
+    status: 'available',
+  };
+  setBooks([...books, newEntry]);
+  setShowAddModal(false);
+
+  // Reset filters to make sure book shows
+  setSearchTerm('');
+  setSelectedCategory('All');
+};
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
