@@ -14,10 +14,15 @@ import BorrowingHistory from './components/BorrowingHistory';
 import BookCard from './components/BookCard';
 import BookForm from './components/BookForm';
 import BorrowForm from './components/BorrowForm';
+import AdvancedSearchFilters from './components/AdvancedSearchFilters';
+import ReadingProgressModal from './components/ReadingProgressModal';
+import ReadingGoalsModal from './components/ReadingGoalsModal';
+import BookRatingModal from './components/BookRatingModal';
 
-import { loadBooks, saveBooks } from './utils/localStorage';
+import { loadBooks, saveBooks, loadReadingGoals, saveReadingGoals } from './utils/localStorage';
+import { filterBooks, sortBooks, getReadingStats } from './utils/bookUtils';
 
-import { BookOpen, BarChart3, History, Menu, X } from 'lucide-react';
+import { BookOpen, BarChart3, History, Menu, X, Target, TrendingUp } from 'lucide-react';
 
 import './App.css';
 
@@ -27,10 +32,27 @@ function AppContent() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showBookForm, setShowBookForm] = useState(false);
   const [showBorrowForm, setShowBorrowForm] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [editingBook, setEditingBook] = useState(undefined);
   const [borrowingBook, setBorrowingBook] = useState(undefined);
+  const [progressBook, setProgressBook] = useState(undefined);
+  const [ratingBook, setRatingBook] = useState(undefined);
   const [currentView, setCurrentView] = useState('library');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [readingGoals, setReadingGoals] = useState({});
+
+  // Advanced filters state
+  const [filters, setFilters] = useState({
+    category: '',
+    status: '',
+    yearRange: { min: '', max: '' },
+    pageRange: { min: '', max: '' },
+    rating: '',
+    sortBy: 'title-asc'
+  });
 
   const { currentUser } = useAuth();
   const location = useLocation();
@@ -39,7 +61,9 @@ function AppContent() {
   useEffect(() => {
     if (currentUser) {
       const storedBooks = loadBooks();
+      const storedGoals = loadReadingGoals();
       setBooks(storedBooks);
+      setReadingGoals(storedGoals);
     }
   }, [currentUser]);
 
@@ -49,14 +73,16 @@ function AppContent() {
     }
   }, [books, currentUser]);
 
-  const filteredBooks = books.filter((book) => {
-    const matchesSearch =
-      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (book.isbn && book.isbn.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = selectedCategory === '' || book.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Apply filters and sorting
+  const filteredAndSortedBooks = React.useMemo(() => {
+    let result = filterBooks(books, searchTerm, {
+      ...filters,
+      category: selectedCategory || filters.category
+    });
+    return sortBooks(result, filters.sortBy);
+  }, [books, searchTerm, selectedCategory, filters]);
+
+  const stats = getReadingStats(books);
 
   const handleSaveBook = (book) => {
     if (editingBook) {
@@ -113,10 +139,42 @@ function AppContent() {
     }
   };
 
+  const handleUpdateProgress = (book) => {
+    setProgressBook(book);
+    setShowProgressModal(true);
+  };
+
+  const handleSaveProgress = (updatedBook) => {
+    setBooks((prev) => prev.map((b) => (b.id === updatedBook.id ? updatedBook : b)));
+    setShowProgressModal(false);
+    setProgressBook(undefined);
+  };
+
+  const handleRateBook = (book) => {
+    setRatingBook(book);
+    setShowRatingModal(true);
+  };
+
+  const handleSaveRating = (updatedBook) => {
+    setBooks((prev) => prev.map((b) => (b.id === updatedBook.id ? updatedBook : b)));
+    setShowRatingModal(false);
+    setRatingBook(undefined);
+  };
+
+  const handleSaveGoals = (goals) => {
+    setReadingGoals(goals);
+    saveReadingGoals(goals);
+    setShowGoalsModal(false);
+  };
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'statistics':
-        return <Statistics books={books} />;
+        return <Statistics books={books} goals={readingGoals} />;
       case 'history':
         return <BorrowingHistory books={books} />;
       default:
@@ -125,19 +183,80 @@ function AppContent() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">My Library</h1>
-                <p className="text-gray-600 mt-1">{filteredBooks.length} books found</p>
+                <p className="text-gray-600 mt-1">
+                  {filteredAndSortedBooks.length} of {books.length} books
+                  {searchTerm && ` matching "${searchTerm}"`}
+                </p>
               </div>
-              <button
-                onClick={() => setShowBookForm(true)}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center shadow-sm"
-              >
-                ➕ Add New Book
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowGoalsModal(true)}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center shadow-sm"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Goals
+                </button>
+                <button
+                  onClick={() => setShowBookForm(true)}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center shadow-sm"
+                >
+                  ➕ Add Book
+                </button>
+              </div>
             </div>
 
-            <SearchBar value={searchTerm} onChange={setSearchTerm} />
+            {/* Reading Goals Progress */}
+            {readingGoals.yearlyTarget && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+                    {new Date().getFullYear()} Reading Progress
+                  </h3>
+                  <button
+                    onClick={() => setShowGoalsModal(true)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Edit Goals
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm text-gray-700">Books Read</span>
+                      <span className="text-sm font-medium">{stats.finishedThisYear} / {readingGoals.yearlyTarget}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min((stats.finishedThisYear / readingGoals.yearlyTarget) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm text-gray-700">Pages Read</span>
+                      <span className="text-sm font-medium">{stats.pagesThisYear.toLocaleString()} / {readingGoals.pagesTarget?.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min((stats.pagesThisYear / (readingGoals.pagesTarget || 1)) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {filteredBooks.length === 0 ? (
+            <SearchBar 
+              value={searchTerm} 
+              onChange={setSearchTerm}
+              onFiltersClick={() => setShowAdvancedFilters(true)}
+              books={books}
+            />
+
+            {filteredAndSortedBooks.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -159,13 +278,15 @@ function AppContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredBooks.map((book) => (
+                {filteredAndSortedBooks.map((book) => (
                   <BookCard
                     key={book.id}
                     book={book}
                     onEdit={handleEditBook}
                     onBorrow={handleBorrowBook}
                     onReturn={handleReturnBook}
+                    onUpdateProgress={handleUpdateProgress}
+                    onRate={handleRateBook}
                   />
                 ))}
               </div>
@@ -266,6 +387,41 @@ function AppContent() {
                     onCancel={() => {
                       setShowBorrowForm(false);
                       setBorrowingBook(undefined);
+                    }}
+                  />
+                )}
+                {showAdvancedFilters && (
+                  <AdvancedSearchFilters
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    onClose={() => setShowAdvancedFilters(false)}
+                  />
+                )}
+                {showProgressModal && progressBook && (
+                  <ReadingProgressModal
+                    book={progressBook}
+                    onSave={handleSaveProgress}
+                    onCancel={() => {
+                      setShowProgressModal(false);
+                      setProgressBook(undefined);
+                    }}
+                  />
+                )}
+                {showGoalsModal && (
+                  <ReadingGoalsModal
+                    goals={readingGoals}
+                    books={books}
+                    onSave={handleSaveGoals}
+                    onCancel={() => setShowGoalsModal(false)}
+                  />
+                )}
+                {showRatingModal && ratingBook && (
+                  <BookRatingModal
+                    book={ratingBook}
+                    onSave={handleSaveRating}
+                    onCancel={() => {
+                      setShowRatingModal(false);
+                      setRatingBook(undefined);
                     }}
                   />
                 )}

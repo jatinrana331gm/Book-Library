@@ -5,10 +5,14 @@ import {
   Calendar,
   FileText,
   User,
-  Hash
+  Hash,
+  Star,
+  BookOpen,
+  Target,
+  MoreVertical
 } from 'lucide-react';
 
-const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
+const BookCard = ({ book, onEdit, onBorrow, onReturn, onUpdateProgress, onRate }) => {
   const categoryColors = {
     'Fiction': 'bg-purple-100 text-purple-800',
     'Non-Fiction': 'bg-blue-100 text-blue-800',
@@ -33,13 +37,47 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
     'Other': 'bg-gray-100 text-gray-800'
   };
 
+  const statusColors = {
+    'want-to-read': 'bg-blue-100 text-blue-800',
+    'currently-reading': 'bg-orange-100 text-orange-800',
+    'finished': 'bg-green-100 text-green-800',
+    'available': 'bg-gray-100 text-gray-800',
+    'borrowed': 'bg-red-100 text-red-800'
+  };
+
+  const statusLabels = {
+    'want-to-read': 'Want to Read',
+    'currently-reading': 'Reading',
+    'finished': 'Finished',
+    'available': 'Available',
+    'borrowed': 'Borrowed'
+  };
+
   const currentBorrowing = book.borrowingHistory?.find(
     (record) => !record.returnDate
   );
 
+  const renderStars = (rating) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`w-3 h-3 ${
+          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        }`}
+      />
+    ));
+  };
+
+  const getProgressPercentage = () => {
+    if (!book.readingProgress || !book.readingProgress.currentPage || !book.pages) {
+      return 0;
+    }
+    return Math.round((book.readingProgress.currentPage / book.pages) * 100);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group">
-      <div className="aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center relative">
         {book.coverUrl ? (
           <img
             src={book.coverUrl}
@@ -57,6 +95,22 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
         >
           <Book className="w-16 h-16 text-blue-400" />
         </div>
+
+        {/* Reading Progress Overlay */}
+        {book.status === 'currently-reading' && book.readingProgress && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2">
+            <div className="flex items-center justify-between text-xs">
+              <span>{getProgressPercentage()}% complete</span>
+              <span>{book.readingProgress.currentPage || 0} / {book.pages || 0}</span>
+            </div>
+            <div className="w-full bg-gray-600 rounded-full h-1 mt-1">
+              <div 
+                className="bg-blue-400 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${getProgressPercentage()}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-4">
@@ -67,17 +121,27 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
           >
             {book.category || 'Unknown'}
           </span>
-          <div
-            className={`w-3 h-3 rounded-full ${
-              book.status === 'available' ? 'bg-green-400' : 'bg-orange-400'
-            }`}
-          />
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[book.status] || 'bg-gray-100 text-gray-800'}`}
+          >
+            {statusLabels[book.status] || book.status}
+          </span>
         </div>
 
         {/* Title */}
         <h3 className="font-bold text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
           {book.title}
         </h3>
+
+        {/* Rating */}
+        {book.rating && (
+          <div className="flex items-center mb-2">
+            <div className="flex items-center mr-2">
+              {renderStars(book.rating)}
+            </div>
+            <span className="text-xs text-gray-600">({book.rating}/5)</span>
+          </div>
+        )}
 
         {/* Info */}
         <div className="space-y-1 text-sm text-gray-600 mb-3">
@@ -107,6 +171,27 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
             </div>
           )}
         </div>
+
+        {/* Reading Progress Info */}
+        {book.status === 'currently-reading' && book.readingProgress && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
+            <div className="flex items-center justify-between text-blue-800 text-sm">
+              <div className="flex items-center">
+                <BookOpen className="w-4 h-4 mr-1" />
+                <span>Reading Progress</span>
+              </div>
+              <button
+                onClick={() => onUpdateProgress(book)}
+                className="text-blue-600 hover:text-blue-800 text-xs"
+              >
+                Update
+              </button>
+            </div>
+            <p className="text-blue-700 text-xs mt-1">
+              Page {book.readingProgress.currentPage || 0} of {book.pages || 0}
+            </p>
+          </div>
+        )}
 
         {/* Borrowing Info */}
         {currentBorrowing && (
@@ -138,12 +223,26 @@ const BookCard = ({ book, onEdit, onBorrow, onReturn }) => {
             >
               Borrow
             </button>
-          ) : (
+          ) : book.status === 'borrowed' ? (
             <button
               onClick={() => onReturn(book)}
               className="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
             >
               Return
+            </button>
+          ) : book.status === 'currently-reading' ? (
+            <button
+              onClick={() => onUpdateProgress(book)}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              Progress
+            </button>
+          ) : (
+            <button
+              onClick={() => onRate(book)}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-yellow-500 rounded-lg hover:bg-yellow-600 transition-colors"
+            >
+              Rate
             </button>
           )}
         </div>
