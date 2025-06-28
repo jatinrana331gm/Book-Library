@@ -6,7 +6,8 @@ import {
   signInWithPopup,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  sendEmailVerification
+  sendEmailVerification,
+  sendSignInLinkToEmail
 } from "firebase/auth";
 import { auth } from "../auth/firebase";
 import { BookOpen, Mail, Lock, Eye, EyeOff, Phone, Smartphone, ArrowLeft, CheckCircle } from "lucide-react";
@@ -14,8 +15,8 @@ import OTPInput from "../components/OTPInput";
 import PhoneInput from "../components/PhoneInput";
 
 const Signup = () => {
-  const [signupMethod, setSignupMethod] = useState('email'); // 'email', 'phone'
-  const [step, setStep] = useState('credentials'); // 'credentials', 'otp', 'email-verification', 'success'
+  const [signupMethod, setSignupMethod] = useState('email'); // 'email', 'phone', 'email-otp'
+  const [step, setStep] = useState('credentials'); // 'credentials', 'otp', 'email-verification', 'success', 'email-otp-sent'
   
   // Email signup states
   const [email, setEmail] = useState("");
@@ -24,6 +25,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
   
   // Phone signup states
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -37,14 +39,34 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          // reCAPTCHA solved
+    return new Promise((resolve, reject) => {
+      try {
+        // Clear any existing recaptcha
+        if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
         }
-      });
-    }
+        
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'normal',
+          callback: (response) => {
+            console.log('reCAPTCHA solved');
+            resolve(response);
+          },
+          'expired-callback': () => {
+            console.log('reCAPTCHA expired');
+            reject(new Error('reCAPTCHA expired'));
+          }
+        });
+        
+        window.recaptchaVerifier.render().then((widgetId) => {
+          console.log('reCAPTCHA rendered with widget ID:', widgetId);
+          resolve(widgetId);
+        });
+      } catch (error) {
+        console.error('Error setting up reCAPTCHA:', error);
+        reject(error);
+      }
+    });
   };
 
   const handleEmailSignup = async (e) => {
@@ -68,6 +90,7 @@ const Signup = () => {
       await sendEmailVerification(userCredential.user);
       setStep('email-verification');
     } catch (err) {
+      console.error('Email signup error:', err);
       if (err.code === "auth/email-already-in-use") {
         setError("An account with this email already exists");
       } else if (err.code === "auth/weak-password") {
@@ -80,21 +103,47 @@ const Signup = () => {
     }
   };
 
+  const handleEmailOtpSignup = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const actionCodeSettings = {
+        url: window.location.origin + '/signup',
+        handleCodeInApp: true,
+      };
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      localStorage.setItem('emailForSignIn', email);
+      setEmailOtpSent(true);
+      setStep('email-otp-sent');
+    } catch (err) {
+      console.error('Email OTP signup error:', err);
+      setError("Failed to send email OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePhoneSignup = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      setupRecaptcha();
+      await setupRecaptcha();
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
       setConfirmationResult(confirmation);
       setStep('otp');
     } catch (err) {
+      console.error('Phone signup error:', err);
       if (err.code === "auth/too-many-requests") {
         setError("Too many requests. Please try again later.");
+      } else if (err.code === "auth/invalid-phone-number") {
+        setError("Invalid phone number format. Please check and try again.");
       } else {
-        setError("Failed to send OTP. Please check your phone number.");
+        setError("Failed to send OTP. Please check your phone number and try again.");
       }
     } finally {
       setLoading(false);
@@ -112,6 +161,7 @@ const Signup = () => {
         navigate("/dashboard");
       }, 2000);
     } catch (err) {
+      console.error('OTP verification error:', err);
       setError("Invalid OTP. Please try again.");
     } finally {
       setOtpLoading(false);
@@ -124,6 +174,7 @@ const Signup = () => {
       await sendEmailVerification(auth.currentUser);
       setEmailVerificationSent(true);
     } catch (err) {
+      console.error('Resend email verification error:', err);
       setError("Failed to send verification email.");
     } finally {
       setLoading(false);
@@ -139,11 +190,36 @@ const Signup = () => {
       await signInWithPopup(auth, provider);
       navigate("/dashboard");
     } catch (err) {
+      console.error('Google signup error:', err);
       setError("Google sign-up failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  const renderEmailOtpSent = () => (
+    <div className="text-center space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <Mail className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+        <h3 className="text-lg font-semibold text-blue-800 mb-2">Check Your Email</h3>
+        <p className="text-blue-700 text-sm">
+          We've sent a sign-up link to <strong>{email}</strong>. 
+          Click the link in your email to create your account.
+        </p>
+      </div>
+
+      <button
+        onClick={() => {
+          setStep('credentials');
+          setEmailOtpSent(false);
+        }}
+        className="flex items-center justify-center w-full text-gray-600 hover:text-gray-800 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Sign Up
+      </button>
+    </div>
+  );
 
   const renderSuccessStep = () => (
     <div className="text-center space-y-6">
@@ -241,6 +317,9 @@ const Signup = () => {
           setStep('credentials');
           setConfirmationResult(null);
           setError("");
+          if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
+          }
         }}
         className="flex items-center justify-center w-full text-gray-600 hover:text-gray-800 transition-colors"
       >
@@ -256,24 +335,35 @@ const Signup = () => {
       <div className="flex bg-gray-100 rounded-lg p-1">
         <button
           onClick={() => setSignupMethod('email')}
-          className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             signupMethod === 'email'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          <Mail className="w-4 h-4 mr-2" />
+          <Mail className="w-4 h-4 mr-1" />
           Email
         </button>
         <button
+          onClick={() => setSignupMethod('email-otp')}
+          className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            signupMethod === 'email-otp'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          <Mail className="w-4 h-4 mr-1" />
+          Email OTP
+        </button>
+        <button
           onClick={() => setSignupMethod('phone')}
-          className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             signupMethod === 'phone'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          <Phone className="w-4 h-4 mr-2" />
+          <Phone className="w-4 h-4 mr-1" />
           Phone
         </button>
       </div>
@@ -356,6 +446,36 @@ const Signup = () => {
         </form>
       )}
 
+      {/* Email OTP Signup Form */}
+      {signupMethod === 'email-otp' && (
+        <form onSubmit={handleEmailOtpSignup} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder="Enter your email"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !email}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Sending..." : "Send Email OTP"}
+          </button>
+        </form>
+      )}
+
       {/* Phone Signup Form */}
       {signupMethod === 'phone' && (
         <form onSubmit={handlePhoneSignup} className="space-y-4">
@@ -434,6 +554,7 @@ const Signup = () => {
           {step === 'otp' && renderOTPStep()}
           {step === 'email-verification' && renderEmailVerification()}
           {step === 'success' && renderSuccessStep()}
+          {step === 'email-otp-sent' && renderEmailOtpSent()}
 
           {/* Login Link */}
           {step === 'credentials' && (
@@ -449,7 +570,7 @@ const Signup = () => {
         </div>
 
         {/* Recaptcha Container */}
-        <div id="recaptcha-container"></div>
+        <div id="recaptcha-container" className="mt-4"></div>
       </div>
     </div>
   );

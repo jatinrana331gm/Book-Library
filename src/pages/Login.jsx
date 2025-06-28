@@ -6,7 +6,10 @@ import {
   signInWithPopup,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  sendEmailVerification
+  sendEmailVerification,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from "firebase/auth";
 import { auth } from "../auth/firebase";
 import { BookOpen, Mail, Lock, Eye, EyeOff, Phone, Smartphone, ArrowLeft } from "lucide-react";
@@ -14,14 +17,15 @@ import OTPInput from "../components/OTPInput";
 import PhoneInput from "../components/PhoneInput";
 
 const Login = () => {
-  const [loginMethod, setLoginMethod] = useState('email'); // 'email', 'phone'
-  const [step, setStep] = useState('credentials'); // 'credentials', 'otp', 'email-verification'
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email', 'phone', 'email-otp'
+  const [step, setStep] = useState('credentials'); // 'credentials', 'otp', 'email-verification', 'email-otp-sent'
   
   // Email login states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
   
   // Phone login states
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -35,14 +39,34 @@ const Login = () => {
   const navigate = useNavigate();
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          // reCAPTCHA solved
+    return new Promise((resolve, reject) => {
+      try {
+        // Clear any existing recaptcha
+        if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
         }
-      });
-    }
+        
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'normal',
+          callback: (response) => {
+            console.log('reCAPTCHA solved');
+            resolve(response);
+          },
+          'expired-callback': () => {
+            console.log('reCAPTCHA expired');
+            reject(new Error('reCAPTCHA expired'));
+          }
+        });
+        
+        window.recaptchaVerifier.render().then((widgetId) => {
+          console.log('reCAPTCHA rendered with widget ID:', widgetId);
+          resolve(widgetId);
+        });
+      } catch (error) {
+        console.error('Error setting up reCAPTCHA:', error);
+        reject(error);
+      }
+    });
   };
 
   const handleEmailLogin = async (e) => {
@@ -62,7 +86,31 @@ const Login = () => {
       
       navigate("/dashboard");
     } catch (err) {
+      console.error('Email login error:', err);
       setError("Invalid email or password. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailOtpLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const actionCodeSettings = {
+        url: window.location.origin + '/login',
+        handleCodeInApp: true,
+      };
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      localStorage.setItem('emailForSignIn', email);
+      setEmailOtpSent(true);
+      setStep('email-otp-sent');
+    } catch (err) {
+      console.error('Email OTP error:', err);
+      setError("Failed to send email OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -74,12 +122,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      setupRecaptcha();
+      await setupRecaptcha();
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
       setConfirmationResult(confirmation);
       setStep('otp');
     } catch (err) {
-      setError("Failed to send OTP. Please check your phone number.");
+      console.error('Phone login error:', err);
+      if (err.code === "auth/too-many-requests") {
+        setError("Too many requests. Please try again later.");
+      } else if (err.code === "auth/invalid-phone-number") {
+        setError("Invalid phone number format. Please check and try again.");
+      } else {
+        setError("Failed to send OTP. Please check your phone number and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -93,6 +148,7 @@ const Login = () => {
       await confirmationResult.confirm(otp);
       navigate("/dashboard");
     } catch (err) {
+      console.error('OTP verification error:', err);
       setError("Invalid OTP. Please try again.");
     } finally {
       setOtpLoading(false);
@@ -105,6 +161,7 @@ const Login = () => {
       await sendEmailVerification(auth.currentUser);
       setEmailVerificationSent(true);
     } catch (err) {
+      console.error('Email verification error:', err);
       setError("Failed to send verification email.");
     } finally {
       setLoading(false);
@@ -120,11 +177,56 @@ const Login = () => {
       await signInWithPopup(auth, provider);
       navigate("/dashboard");
     } catch (err) {
+      console.error('Google login error:', err);
       setError("Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Check for email link sign-in on component mount
+  React.useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('Please provide your email for confirmation');
+      }
+      
+      signInWithEmailLink(auth, email, window.location.href)
+        .then(() => {
+          localStorage.removeItem('emailForSignIn');
+          navigate("/dashboard");
+        })
+        .catch((error) => {
+          console.error('Email link sign-in error:', error);
+          setError("Failed to sign in with email link.");
+        });
+    }
+  }, [navigate]);
+
+  const renderEmailOtpSent = () => (
+    <div className="text-center space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <Mail className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+        <h3 className="text-lg font-semibold text-blue-800 mb-2">Check Your Email</h3>
+        <p className="text-blue-700 text-sm">
+          We've sent a sign-in link to <strong>{email}</strong>. 
+          Click the link in your email to sign in.
+        </p>
+      </div>
+
+      <button
+        onClick={() => {
+          setStep('credentials');
+          setEmailOtpSent(false);
+        }}
+        className="flex items-center justify-center w-full text-gray-600 hover:text-gray-800 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Login
+      </button>
+    </div>
+  );
 
   const renderEmailVerification = () => (
     <div className="text-center space-y-6">
@@ -200,6 +302,9 @@ const Login = () => {
           setStep('credentials');
           setConfirmationResult(null);
           setError("");
+          if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
+          }
         }}
         className="flex items-center justify-center w-full text-gray-600 hover:text-gray-800 transition-colors"
       >
@@ -215,24 +320,35 @@ const Login = () => {
       <div className="flex bg-gray-100 rounded-lg p-1">
         <button
           onClick={() => setLoginMethod('email')}
-          className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             loginMethod === 'email'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          <Mail className="w-4 h-4 mr-2" />
+          <Mail className="w-4 h-4 mr-1" />
           Email
         </button>
         <button
+          onClick={() => setLoginMethod('email-otp')}
+          className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            loginMethod === 'email-otp'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          <Mail className="w-4 h-4 mr-1" />
+          Email OTP
+        </button>
+        <button
           onClick={() => setLoginMethod('phone')}
-          className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             loginMethod === 'phone'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
           }`}
         >
-          <Phone className="w-4 h-4 mr-2" />
+          <Phone className="w-4 h-4 mr-1" />
           Phone
         </button>
       </div>
@@ -287,6 +403,36 @@ const Login = () => {
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Signing in..." : "Sign In with Email"}
+          </button>
+        </form>
+      )}
+
+      {/* Email OTP Login Form */}
+      {loginMethod === 'email-otp' && (
+        <form onSubmit={handleEmailOtpLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder="Enter your email"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !email}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Sending..." : "Send Email OTP"}
           </button>
         </form>
       )}
@@ -368,6 +514,7 @@ const Login = () => {
           {step === 'credentials' && renderCredentialsStep()}
           {step === 'otp' && renderOTPStep()}
           {step === 'email-verification' && renderEmailVerification()}
+          {step === 'email-otp-sent' && renderEmailOtpSent()}
 
           {/* Sign Up Link */}
           {step === 'credentials' && (
@@ -383,7 +530,7 @@ const Login = () => {
         </div>
 
         {/* Recaptcha Container */}
-        <div id="recaptcha-container"></div>
+        <div id="recaptcha-container" className="mt-4"></div>
       </div>
     </div>
   );

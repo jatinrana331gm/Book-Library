@@ -14,4 +14,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+// Enable app verification for phone auth
+auth.settings = {
+  appVerificationDisabledForTesting: false
+};
+
 export { auth };
