@@ -18,11 +18,17 @@ import AdvancedSearchFilters from './components/AdvancedSearchFilters';
 import ReadingProgressModal from './components/ReadingProgressModal';
 import ReadingGoalsModal from './components/ReadingGoalsModal';
 import BookRatingModal from './components/BookRatingModal';
+import BookRecommendations from './components/BookRecommendations';
+import ReadingStreakTracker from './components/ReadingStreakTracker';
+import BookSeriesTracker from './components/BookSeriesTracker';
+import ReadingChallenges from './components/ReadingChallenges';
+import ImportExportBooks from './components/ImportExportBooks';
+import SocialFeatures from './components/SocialFeatures';
 
 import { loadBooks, saveBooks, loadReadingGoals, saveReadingGoals } from './utils/localStorage';
 import { filterBooks, sortBooks, getReadingStats } from './utils/bookUtils';
 
-import { BookOpen, BarChart3, History, Menu, X, Target, TrendingUp } from 'lucide-react';
+import { BookOpen, BarChart3, History, Menu, X, Target, TrendingUp, Users, Trophy, Download, Sparkles } from 'lucide-react';
 
 import './App.css';
 
@@ -40,6 +46,7 @@ function AppContent() {
   const [borrowingBook, setBorrowingBook] = useState(undefined);
   const [progressBook, setProgressBook] = useState(undefined);
   const [ratingBook, setRatingBook] = useState(undefined);
+  const [selectedBook, setSelectedBook] = useState(null);
   const [currentView, setCurrentView] = useState('library');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [readingGoals, setReadingGoals] = useState({});
@@ -171,12 +178,43 @@ function AppContent() {
     setFilters(newFilters);
   };
 
+  const handleBookSelect = (book) => {
+    setSelectedBook(book);
+    // You could also navigate to a detailed book view here
+  };
+
+  const handleImportBooks = (importedBooks) => {
+    setBooks(prev => [...prev, ...importedBooks]);
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'statistics':
-        return <Statistics books={books} goals={readingGoals} />;
+        return (
+          <div className="space-y-6">
+            <Statistics books={books} goals={readingGoals} />
+            <ReadingStreakTracker books={books} />
+          </div>
+        );
       case 'history':
         return <BorrowingHistory books={books} />;
+      case 'social':
+        return <SocialFeatures books={books} currentUser={currentUser} />;
+      case 'challenges':
+        return <ReadingChallenges books={books} />;
+      case 'import-export':
+        return <ImportExportBooks books={books} onImport={handleImportBooks} />;
+      case 'recommendations':
+        return (
+          <div className="space-y-6">
+            <BookRecommendations 
+              books={books} 
+              currentBook={selectedBook || books.find(b => b.status === 'currently-reading')} 
+              onBookSelect={handleBookSelect}
+            />
+            <BookSeriesTracker books={books} onBookSelect={handleBookSelect} />
+          </div>
+        );
       default:
         return (
           <div className="space-y-6">
@@ -249,6 +287,15 @@ function AppContent() {
               </div>
             )}
 
+            {/* Book Recommendations */}
+            {selectedBook && (
+              <BookRecommendations 
+                books={books} 
+                currentBook={selectedBook} 
+                onBookSelect={handleBookSelect}
+              />
+            )}
+
             <SearchBar 
               value={searchTerm} 
               onChange={setSearchTerm}
@@ -279,15 +326,16 @@ function AppContent() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredAndSortedBooks.map((book) => (
-                  <BookCard
-                    key={book.id}
-                    book={book}
-                    onEdit={handleEditBook}
-                    onBorrow={handleBorrowBook}
-                    onReturn={handleReturnBook}
-                    onUpdateProgress={handleUpdateProgress}
-                    onRate={handleRateBook}
-                  />
+                  <div key={book.id} onClick={() => setSelectedBook(book)}>
+                    <BookCard
+                      book={book}
+                      onEdit={handleEditBook}
+                      onBorrow={handleBorrowBook}
+                      onReturn={handleReturnBook}
+                      onUpdateProgress={handleUpdateProgress}
+                      onRate={handleRateBook}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -299,7 +347,11 @@ function AppContent() {
   const menuItems = [
     { id: 'library', label: 'Library', icon: BookOpen },
     { id: 'statistics', label: 'Statistics', icon: BarChart3 },
-    { id: 'history', label: 'Borrowing History', icon: History }
+    { id: 'recommendations', label: 'Recommendations', icon: Sparkles },
+    { id: 'challenges', label: 'Challenges', icon: Trophy },
+    { id: 'social', label: 'Social', icon: Users },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'import-export', label: 'Import/Export', icon: Download }
   ];
 
   return (
