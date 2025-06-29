@@ -4,8 +4,49 @@
 - **Project ID**: booklibrary-c1b67
 - **Project Number**: 711300589543
 - **Current Domain**: book-library-swart.vercel.app
+- **Local Development**: https://localhost:5173 (HTTPS)
 
-## Steps to Enable Google Authentication
+## 🚨 URGENT FIX NEEDED
+
+Your local development server is running on HTTPS (`https://localhost:5173`), but your Firebase project is not configured for this domain. This is causing the `auth/unauthorized-domain` error.
+
+## Quick Fix Steps
+
+### 1. Add HTTPS Localhost to Firebase Console (IMMEDIATE ACTION REQUIRED)
+
+1. **Go to Firebase Console:**
+   - Visit: https://console.firebase.google.com/
+   - Select your project: `booklibrary-c1b67`
+
+2. **Add HTTPS Localhost Domain:**
+   - Click "Authentication" in the left sidebar
+   - Click "Settings" tab
+   - Scroll to "Authorized domains"
+   - Click "Add domain"
+   - Enter: `localhost:5173`
+   - Click "Add"
+
+### 2. Update Google Cloud Console OAuth Settings
+
+1. **Go to Google Cloud Console:**
+   - Visit: https://console.cloud.google.com/
+   - Select project: `booklibrary-c1b67` (Project ID: 711300589543)
+
+2. **Update OAuth 2.0 Client:**
+   - Go to "APIs & Services" → "Credentials"
+   - Find your OAuth 2.0 Client ID (should already exist from Firebase)
+   - Click to edit it
+   - Under "Authorized JavaScript origins", ensure these are present:
+     - `http://localhost:5173` (existing)
+     - `https://localhost:5173` (ADD THIS)
+     - `https://book-library-swart.vercel.app` (existing)
+   - Under "Authorized redirect URIs", ensure these are present:
+     - `http://localhost:5173/__/auth/handler` (existing)
+     - `https://localhost:5173/__/auth/handler` (ADD THIS)
+     - `https://book-library-swart.vercel.app/__/auth/handler` (existing)
+   - Click "Save"
+
+## Complete Setup Guide
 
 ### 1. Enable Google Authentication in Firebase Console
 
@@ -28,14 +69,10 @@
    - Go to Authentication → Settings
    - Scroll to "Authorized domains"
    - Ensure these domains are added:
-     - `localhost` (for development)
+     - `localhost` (for both HTTP and HTTPS development)
+     - `localhost:5173` (specific port for your dev server)
      - `book-library-swart.vercel.app` (your production domain)
      - `booklibrary-c1b67.firebaseapp.com` (default Firebase domain)
-
-2. **Add Your Vercel Domain:**
-   - Click "Add domain"
-   - Enter: `book-library-swart.vercel.app`
-   - Click "Add"
 
 ### 3. Google Cloud Console Configuration
 
@@ -43,14 +80,7 @@
    - Visit: https://console.cloud.google.com/
    - Select project: `booklibrary-c1b67` (Project ID: 711300589543)
 
-2. **Enable Required APIs:**
-   - Go to "APIs & Services" → "Library"
-   - Search and enable:
-     - "Google+ API" (if available)
-     - "People API"
-     - "Identity and Access Management (IAM) API"
-
-3. **Configure OAuth Consent Screen:**
+2. **Configure OAuth Consent Screen:**
    - Go to "APIs & Services" → "OAuth consent screen"
    - Choose "External" user type
    - Fill in required fields:
@@ -58,22 +88,23 @@
      - User support email: your email
      - Developer contact information: your email
    - Add scopes: `email`, `profile`, `openid`
-   - Add test users if needed
 
-4. **Configure OAuth 2.0 Client:**
+3. **Configure OAuth 2.0 Client:**
    - Go to "APIs & Services" → "Credentials"
-   - Find your OAuth 2.0 Client ID (should already exist from Firebase)
+   - Find your OAuth 2.0 Client ID
    - Click to edit it
    - Add authorized JavaScript origins:
-     - `http://localhost:5173` (for development)
+     - `http://localhost:5173` (for HTTP development)
+     - `https://localhost:5173` (for HTTPS development - REQUIRED)
      - `https://book-library-swart.vercel.app` (for production)
    - Add authorized redirect URIs:
-     - `http://localhost:5173/__/auth/handler` (for development)
-     - `https://book-library-swart.vercel.app/__/auth/handler` (for production)
+     - `http://localhost:5173/__/auth/handler`
+     - `https://localhost:5173/__/auth/handler` (REQUIRED)
+     - `https://book-library-swart.vercel.app/__/auth/handler`
 
 ### 4. Verify Firebase Configuration
 
-Your current Firebase config should work, but verify these settings:
+Your current Firebase config is correct:
 
 ```javascript
 // src/auth/firebase.js
@@ -104,78 +135,65 @@ googleProvider.setCustomParameters({
 export { auth, googleProvider };
 ```
 
-### 5. Test the Configuration
+## Testing After Configuration
 
-1. **Local Testing:**
-   - Run your app locally: `npm run dev`
-   - Try Google sign-in at `http://localhost:5173/login`
-
-2. **Production Testing:**
-   - Test on your live site: `https://book-library-swart.vercel.app/login`
-
-### 6. Troubleshooting Common Issues
-
-**Error: "auth/unauthorized-domain"**
-- Solution: Add your domain to Firebase authorized domains
-
-**Error: "auth/popup-blocked"**
-- Solution: Your app already handles this with redirect fallback
-
-**Error: "auth/operation-not-allowed"**
-- Solution: Enable Google sign-in in Firebase Console
-
-**Error: "redirect_uri_mismatch"**
-- Solution: Add correct redirect URIs in Google Cloud Console
-
-### 7. Security Considerations
-
-1. **API Key Security:**
-   - Your Firebase API key is safe to expose in client-side code
-   - It's restricted by domain and Firebase security rules
-
-2. **Domain Restrictions:**
-   - Only authorized domains can use your Firebase project
-   - Keep the authorized domains list minimal
-
-3. **OAuth Scopes:**
-   - Only request necessary scopes (`email`, `profile`)
-   - Users will see what data you're requesting
-
-### 8. Monitoring and Analytics
-
-1. **Firebase Analytics:**
-   - Your `measurementId` is already configured
-   - Monitor authentication events in Firebase Console
-
-2. **Error Monitoring:**
-   - Check Firebase Console → Authentication → Users
-   - Monitor sign-in methods and user activity
-
-## Quick Commands for Google Cloud CLI (Optional)
-
-If you have `gcloud` CLI installed:
-
+### 1. Clear Browser Data
 ```bash
-# Set your project
-gcloud config set project booklibrary-c1b67
+# Chrome DevTools
+F12 → Application → Storage → Clear site data
 
-# Enable required APIs
-gcloud services enable identitytoolkit.googleapis.com
-gcloud services enable people.googleapis.com
-
-# List enabled APIs
-gcloud services list --enabled
+# Or test in incognito mode
 ```
 
-## Final Checklist
+### 2. Test Local Development (https://localhost:5173)
+- [ ] Email login works
+- [ ] Google login popup works
+- [ ] Google login redirect works (if popup blocked)
+- [ ] No `auth/unauthorized-domain` errors
 
-- [ ] Google sign-in enabled in Firebase Console
-- [ ] Support email configured
-- [ ] Authorized domains added (localhost + Vercel domain)
-- [ ] OAuth consent screen configured in Google Cloud Console
-- [ ] OAuth 2.0 client configured with correct origins and redirect URIs
-- [ ] Firebase config updated in your app
-- [ ] Local testing successful
-- [ ] Production testing successful
+### 3. Test Production (https://book-library-swart.vercel.app)
+- [ ] Email login works
+- [ ] Google login popup works
+- [ ] Google login redirect works (if popup blocked)
+- [ ] No unauthorized domain errors
 
-After completing these steps, Google authentication should work properly on both your local development environment and your deployed Vercel app.
+## Troubleshooting the Current Error
+
+### Error: `auth/unauthorized-domain`
+**Cause**: `https://localhost:5173` is not in Firebase authorized domains
+**Solution**: Add `localhost:5173` to Firebase authorized domains (Step 1 above)
+
+### Error: `redirect_uri_mismatch`
+**Cause**: Missing redirect URI in Google Cloud Console
+**Solution**: Add `https://localhost:5173/__/auth/handler` to OAuth redirect URIs
+
+### Error: `origin_mismatch`
+**Cause**: Missing JavaScript origin in Google Cloud Console
+**Solution**: Add `https://localhost:5173` to OAuth JavaScript origins
+
+## Development Server Configuration
+
+Your Vite development server is configured to use HTTPS. If you want to force HTTP instead:
+
+```javascript
+// vite.config.ts
+export default defineConfig({
+  server: {
+    https: false, // Force HTTP
+    port: 5173
+  }
+})
+```
+
+However, HTTPS is recommended for security, so updating Firebase configuration is the better solution.
+
+## Final Checklist for HTTPS Localhost Fix
+
+- [ ] Add `localhost:5173` to Firebase authorized domains
+- [ ] Add `https://localhost:5173` to Google Cloud OAuth JavaScript origins
+- [ ] Add `https://localhost:5173/__/auth/handler` to Google Cloud OAuth redirect URIs
+- [ ] Clear browser cache
+- [ ] Test Google login on https://localhost:5173/login
+- [ ] Verify no `auth/unauthorized-domain` errors
+
+After completing these steps, Google authentication should work properly on both your local HTTPS development server and your deployed Vercel app.

@@ -8,38 +8,78 @@
 - **API Key**: `AIzaSyDDgCWlp9HK7PLy8m1MiXRXdQrAod5KCwE`
 - **App ID**: `1:711300589543:web:1124af024fcd7e6bcbbf42`
 
-### Current Authorized Domains (from your screenshot)
-✅ `localhost` - for local development
+### Required Authorized Domains
+✅ `localhost` - for local development (HTTP)
+⚠️ **MISSING**: `https://localhost:5173` - for local development (HTTPS)
 ✅ `booklibrary-c1b67.firebaseapp.com` - default Firebase domain
 ✅ `booklibrary-c1b67.web.app` - default Firebase domain
 ✅ `book-library-swart.vercel.app` - your Vercel domain
 
-## Configuration Status: ✅ CORRECT
+## 🚨 URGENT: Configuration Issue Detected
 
-Your Firebase configuration is properly set up! The API key and domain match your project, and all necessary domains are authorized.
+Your local development server is running on **HTTPS** (`https://localhost:5173`), but your Firebase project is only configured for HTTP localhost. This is causing the `auth/unauthorized-domain` error.
 
-## What I've Updated
+## Required Actions to Fix Google Login
 
-### 1. Enhanced Firebase Configuration (`src/auth/firebase.js`)
-- ✅ Verified API key matches your project
-- ✅ Added proper Google Auth Provider configuration
-- ✅ Added required scopes (`email`, `profile`)
-- ✅ Set custom parameters for better UX
+### 1. Add HTTPS Localhost to Firebase Console
 
-### 2. Improved Google Authentication
-- ✅ Added popup with redirect fallback
-- ✅ Better error handling for domain issues
-- ✅ Handles popup blockers gracefully
-- ✅ Checks for redirect results on page load
+1. **Go to Firebase Console:**
+   - Visit: https://console.firebase.google.com/
+   - Select your project: `booklibrary-c1b67`
 
-### 3. Enhanced Error Messages
-- ✅ Specific error for unauthorized domain
-- ✅ User-friendly messages for common issues
-- ✅ Fallback options when popup fails
+2. **Add HTTPS Localhost Domain:**
+   - Click "Authentication" in the left sidebar
+   - Click "Settings" tab
+   - Scroll to "Authorized domains"
+   - Click "Add domain"
+   - Enter: `localhost:5173` (Firebase will handle both HTTP and HTTPS)
+   - Click "Add"
+
+### 2. Update Google Cloud Console OAuth Settings
+
+1. **Go to Google Cloud Console:**
+   - Visit: https://console.cloud.google.com/
+   - Select project: `booklibrary-c1b67`
+
+2. **Update OAuth 2.0 Client:**
+   - Go to "APIs & Services" → "Credentials"
+   - Find your OAuth 2.0 Client ID
+   - Click to edit it
+   - Under "Authorized JavaScript origins", add:
+     - `https://localhost:5173`
+   - Under "Authorized redirect URIs", add:
+     - `https://localhost:5173/__/auth/handler`
+   - Click "Save"
+
+### 3. Alternative: Force HTTP in Development
+
+If you prefer to use HTTP for local development, you can modify your Vite configuration:
+
+```javascript
+// vite.config.ts
+export default defineConfig({
+  // ... other config
+  server: {
+    https: false, // Force HTTP
+    port: 5173
+  }
+})
+```
+
+## Configuration Status: ❌ NEEDS FIXING
+
+Your Firebase configuration needs to be updated to include HTTPS localhost support.
 
 ## Testing Checklist
 
-### Local Development (http://localhost:5173)
+### After Adding HTTPS Localhost Domain:
+
+- [ ] Clear browser cache and cookies
+- [ ] Restart your development server
+- [ ] Test Google login at `https://localhost:5173/login`
+- [ ] Verify no `auth/unauthorized-domain` errors
+
+### Local Development (https://localhost:5173)
 - [ ] Email login works
 - [ ] Google login popup works
 - [ ] Google login redirect works (if popup blocked)
@@ -51,53 +91,58 @@ Your Firebase configuration is properly set up! The API key and domain match you
 - [ ] Google login redirect works (if popup blocked)
 - [ ] No unauthorized domain errors
 
-## Troubleshooting Steps
+## Quick Fix Steps
 
-### If Google Login Still Fails:
+1. **Immediate Fix (Recommended):**
+   - Add `localhost:5173` to Firebase authorized domains
+   - Add `https://localhost:5173` to Google Cloud Console OAuth origins
+   - Add `https://localhost:5173/__/auth/handler` to OAuth redirect URIs
 
-1. **Clear Browser Cache**
+2. **Alternative Fix:**
+   - Modify Vite config to force HTTP instead of HTTPS
+
+## Troubleshooting
+
+### If Google Login Still Fails After Domain Addition:
+
+1. **Wait for Propagation (2-5 minutes)**
+   - Firebase and Google Cloud changes need time to propagate
+
+2. **Clear Browser Data**
    ```bash
    # Chrome DevTools
    F12 → Application → Storage → Clear site data
    
-   # Or use incognito mode
+   # Or use incognito mode for testing
    ```
 
-2. **Check Firebase Console**
-   - Go to Authentication → Sign-in method
-   - Ensure Google is enabled
-   - Verify support email is set
+3. **Verify Domain Format**
+   - Firebase: Use `localhost:5173` (no protocol)
+   - Google Cloud: Use full URLs with protocol
 
-3. **Verify Google Cloud Console**
-   - Go to APIs & Services → Credentials
-   - Check OAuth 2.0 Client ID settings
-   - Ensure authorized origins include your domains
-
-4. **Wait for Propagation**
-   - Firebase changes can take 2-5 minutes
-   - Try again after a few minutes
+4. **Check Console Logs**
+   - Look for additional error details in browser console
+   - Verify the exact domain being rejected
 
 ### Common Error Solutions
 
 | Error | Solution |
 |-------|----------|
-| `auth/unauthorized-domain` | Domain not in Firebase authorized list |
-| `auth/popup-blocked` | App automatically tries redirect fallback |
-| `auth/popup-closed-by-user` | User closed popup, can try again |
-| `auth/network-request-failed` | Check internet connection |
+| `auth/unauthorized-domain` | Add missing domain to Firebase authorized list |
+| `redirect_uri_mismatch` | Add redirect URI to Google Cloud Console |
+| `origin_mismatch` | Add JavaScript origin to Google Cloud Console |
 
 ## Security Notes
 
-✅ **API Key Security**: Your Firebase API key is safe to expose in client-side code
+✅ **HTTPS Security**: Your development server using HTTPS is more secure
 ✅ **Domain Restrictions**: Only authorized domains can use your Firebase project
-✅ **Scope Limitations**: Only requesting necessary Google scopes
-✅ **HTTPS Required**: Production domains must use HTTPS
+✅ **Localhost Exception**: Localhost domains are safe for development
 
 ## Next Steps
 
-1. **Test the updated configuration**
-2. **Clear browser cache if needed**
-3. **Try both popup and redirect methods**
-4. **Verify on both local and production environments**
+1. **Add the missing HTTPS localhost domain to Firebase**
+2. **Update Google Cloud Console OAuth settings**
+3. **Test the configuration**
+4. **Clear browser cache if needed**
 
-The configuration should now work correctly on both your local development environment and your deployed Vercel app!
+The Google login should work immediately after adding the HTTPS localhost domain to your Firebase authorized domains list.
