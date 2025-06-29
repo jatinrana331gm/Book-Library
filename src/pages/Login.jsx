@@ -2,13 +2,12 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
   signInWithEmailAndPassword, 
-  GoogleAuthProvider, 
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult
 } from "firebase/auth";
-import { auth } from "../auth/firebase";
-import { BookOpen, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { auth, googleProvider } from "../auth/firebase";
+import { BookOpen, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -25,10 +24,14 @@ const Login = () => {
       try {
         const result = await getRedirectResult(auth);
         if (result) {
+          console.log('Redirect result successful:', result.user);
           navigate("/dashboard");
         }
       } catch (error) {
         console.error('Redirect result error:', error);
+        if (error.code !== 'auth/null-user') {
+          setError(`Sign-in failed: ${error.message}`);
+        }
       }
     };
     
@@ -41,11 +44,22 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Email login successful:', userCredential.user);
       navigate("/dashboard");
     } catch (err) {
       console.error('Email login error:', err);
-      setError("Invalid email or password. Please try again.");
+      if (err.code === 'auth/user-not-found') {
+        setError("No account found with this email address.");
+      } else if (err.code === 'auth/wrong-password') {
+        setError("Incorrect password. Please try again.");
+      } else if (err.code === 'auth/invalid-email') {
+        setError("Invalid email address format.");
+      } else if (err.code === 'auth/user-disabled') {
+        setError("This account has been disabled.");
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -56,32 +70,38 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
+      console.log('Starting Google sign-in...');
       
       // Try popup first
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Google login successful:', result.user);
       navigate("/dashboard");
     } catch (err) {
       console.error('Google login error:', err);
       
       if (err.code === 'auth/popup-blocked') {
-        // Fallback to redirect
+        console.log('Popup blocked, trying redirect...');
         try {
-          const provider = new GoogleAuthProvider();
-          provider.addScope('email');
-          provider.addScope('profile');
-          await signInWithRedirect(auth, provider);
-          // Redirect will handle navigation
+          await signInWithRedirect(auth, googleProvider);
+          // Redirect will handle navigation automatically
         } catch (redirectErr) {
           console.error('Google redirect error:', redirectErr);
-          setError("Google sign-in failed. Please try again.");
+          setError("Google sign-in failed. Please try again or check your browser settings.");
         }
       } else if (err.code === 'auth/popup-closed-by-user') {
         setError("Sign-in was cancelled. Please try again.");
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError("Another sign-in popup is already open. Please close it and try again.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("This domain is not authorized for Google sign-in. Please contact support.");
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError("Google sign-in is not enabled. Please contact support.");
+      } else if (err.code === 'auth/invalid-api-key') {
+        setError("Invalid API key. Please contact support.");
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        setError("An account already exists with this email using a different sign-in method.");
       } else {
-        setError("Google sign-in failed. Please try again.");
+        setError(`Google sign-in failed: ${err.message}`);
       }
     } finally {
       setLoading(false);
@@ -102,13 +122,30 @@ const Login = () => {
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <form onSubmit={handleEmailLogin} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-red-600 text-sm">{error}</p>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <p className="text-red-600 text-sm">{error}</p>
+                  {error.includes('Google') && (
+                    <div className="mt-2 text-xs text-red-500">
+                      <p>Troubleshooting tips:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-1">
+                        <li>Make sure popups are enabled in your browser</li>
+                        <li>Try disabling ad blockers temporarily</li>
+                        <li>Clear your browser cache and cookies</li>
+                        <li>Try using an incognito/private window</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
+          )}
 
+          <form onSubmit={handleEmailLogin} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -182,7 +219,7 @@ const Login = () => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            {loading ? "Signing in..." : "Continue with Google"}
           </button>
 
           {/* Sign Up Link */}
