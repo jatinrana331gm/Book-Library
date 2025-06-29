@@ -2,14 +2,13 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
   createUserWithEmailAndPassword, 
-  GoogleAuthProvider, 
   signInWithPopup,
   RecaptchaVerifier,
   signInWithPhoneNumber,
   sendEmailVerification,
   sendSignInLinkToEmail
 } from "firebase/auth";
-import { auth } from "../auth/firebase";
+import { auth, googleProvider } from "../auth/firebase";
 import { BookOpen, Mail, Lock, Eye, EyeOff, Phone, Smartphone, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import OTPInput from "../components/OTPInput";
 import PhoneInput from "../components/PhoneInput";
@@ -192,12 +191,33 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      console.log('Starting Google sign-up...');
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      console.log('Google sign-up successful:', result.user);
       navigate("/dashboard");
     } catch (err) {
       console.error('Google signup error:', err);
-      setError("Google sign-up failed. Please try again.");
+      
+      // Handle specific Google Auth errors
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError("Sign-up was cancelled. Please try again.");
+      } else if (err.code === 'auth/popup-blocked') {
+        setError("Popup was blocked by your browser. Please allow popups and try again.");
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError("Another sign-up popup is already open. Please close it and try again.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("This domain is not authorized for Google sign-up. Please contact support.");
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError("Google sign-up is not enabled. Please contact support.");
+      } else if (err.code === 'auth/invalid-api-key') {
+        setError("Invalid API key. Please contact support.");
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        setError("An account already exists with this email using a different sign-in method.");
+      } else {
+        setError(`Google sign-up failed: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -530,7 +550,23 @@ const Signup = () => {
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-600 text-sm">{error}</p>
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <p className="text-red-600 text-sm">{error}</p>
+              {error.includes('Google') && (
+                <div className="mt-2 text-xs text-red-500">
+                  <p>Troubleshooting tips:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Make sure popups are enabled in your browser</li>
+                    <li>Try disabling ad blockers temporarily</li>
+                    <li>Clear your browser cache and cookies</li>
+                    <li>Try using an incognito/private window</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -557,7 +593,7 @@ const Signup = () => {
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
-        Continue with Google
+        {loading ? "Signing up..." : "Continue with Google"}
       </button>
     </div>
   );
