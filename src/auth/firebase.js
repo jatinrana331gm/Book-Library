@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDDgCWlp9HK7PLy8m1MiXRXdQrAod5KCwE",
@@ -14,19 +14,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Configure Google Auth Provider with proper settings
-const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('email');
-googleProvider.addScope('profile');
-
-// Set custom parameters to ensure proper localhost handling
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
-
 // Enable app verification for phone auth
 auth.settings = {
   appVerificationDisabledForTesting: false
 };
 
-export { auth, googleProvider };
+export { auth };
