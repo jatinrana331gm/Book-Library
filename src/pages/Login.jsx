@@ -87,22 +87,7 @@ const Login = () => {
       
       if (error.code === 'auth/popup-blocked') {
         // If popup is blocked, show user-friendly message and offer redirect alternative
-        setError(
-          <div className="space-y-2">
-            <p className="font-medium">Popup blocked by browser</p>
-            <p className="text-sm">Your browser blocked the login popup. You can:</p>
-            <ul className="text-sm list-disc list-inside space-y-1 ml-2">
-              <li>Allow popups for this site in your browser settings</li>
-              <li>Or click "Try Redirect Login" below for an alternative method</li>
-            </ul>
-            <button
-              onClick={handleGoogleRedirectLogin}
-              className="mt-2 text-blue-600 hover:text-blue-800 underline text-sm font-medium"
-            >
-              Try Redirect Login Instead
-            </button>
-          </div>
-        );
+        setError('popup-blocked');
       } else if (error.code === 'auth/popup-closed-by-user') {
         setError('Login cancelled. Please try again.');
       } else if (error.code === 'auth/cancelled-popup-request') {
@@ -134,6 +119,37 @@ const Login = () => {
     }
   };
 
+  const renderError = () => {
+    if (!error) return null;
+
+    if (error === 'popup-blocked') {
+      return (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          <div className="space-y-2">
+            <p className="font-medium">Popup blocked by browser</p>
+            <p className="text-sm">Your browser blocked the login popup. You can:</p>
+            <ul className="text-sm list-disc list-inside space-y-1 ml-2">
+              <li>Allow popups for this site in your browser settings</li>
+              <li>Or click "Try Redirect Login" below for an alternative method</li>
+            </ul>
+            <button
+              onClick={handleGoogleRedirectLogin}
+              className="mt-2 text-blue-600 hover:text-blue-800 underline text-sm font-medium"
+            >
+              Try Redirect Login Instead
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        {error}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -153,11 +169,7 @@ const Login = () => {
 
         <div className="bg-white py-8 px-6 shadow-xl rounded-xl border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {typeof error === 'string' ? error : error}
-              </div>
-            )}
+            {renderError()}
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
