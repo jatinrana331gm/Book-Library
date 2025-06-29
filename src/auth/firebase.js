@@ -27,4 +27,4 @@ auth.settings = {
   appVerificationDisabledForTesting: false
 };
 
-export { auth, googleProvider };
+export { app, auth, googleProvider };
