@@ -2,7 +2,7 @@
 
 A simple and responsive **Book Library Web Application** built with **React (Vite)** and **Tailwind CSS**, integrated with **Firebase** for real-time data storage and authentication.
 
----
+----
 
 ## 🌐 Live Demo
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Book%20Library-brightgreen?style=for-the-badge&logo=vercel)](https://book-library-swart.vercel.app)
