@@ -78,16 +78,17 @@ firebase deploy
 
 ## 📷 Screenshots
 <p align="center">
-  <img src="./screenshots/1.png" width="200" />
-  <img src="./screenshots/2.png" width="200" />
-  <img src="./screenshots/3.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/1.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/2.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/3.png" width="200" />
 </p>
 
 <p align="center">
-  <img src="./screenshots/4.png" width="200" />
-  <img src="./screenshots/5.png" width="200" />
-  <img src="./screenshots/6.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/4.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/5.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/6.png" width="200" />
 </p>
+
 
 
 
