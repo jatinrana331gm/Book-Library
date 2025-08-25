@@ -77,8 +77,7 @@ firebase init
 firebase deploy
 
 📷 Screenshots
-<table> <tr> <td><img src="https://github.com/user-attachments/assets/65cb0410-cc45-424d-a2e5-48eeeea240c5" width="300"/></td> <td><img src="https://github.com/user-attachments/assets/75d34c85-2bea-4438-a46c-f438ac6217c9" width="300"/></td> </tr> <tr> <td><img src="https://github.com/user-attachments/assets/608742a4-1842-443b-8a95-dd33414f857c" width="300"/></td> <td><img src="https://github.com/user-attachments/assets/3954b387-05e4-4a0d-b696-d0f2e8799c41" width="300"/></td> </tr> <tr> <td><img src="https://github.com/user-attachments/assets/f5347c45-2bba-4608-835a-24d585c70bbd" width="300"/></td> <td><img src="https://github.com/user-attachments/assets/fa87744d-3c30-4e2e-a70e-7c1381510b7a" width="300"/></td> </tr> </table>
-
+https://github.com/jatinrana331gm/Book-Library/issues/1#issue-3350323498
 
 🔮 Future Enhancements
 
