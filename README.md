@@ -79,16 +79,17 @@ firebase deploy
 ## Screenshots  
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/1.png" width="200" />
-  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/2.png" width="200" />
-  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/3.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/1.png" width="250" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/2.png" width="250" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/3.png" width="250" />
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/4.png" width="200" />
-  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/5.png" width="200" />
-  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/6.png" width="200" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/4.png" width="250" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/5.png" width="250" />
+  <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/6.png" width="250" />
 </p>
+
 
 
 
