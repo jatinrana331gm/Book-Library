@@ -76,7 +76,8 @@ firebase login
 firebase init
 firebase deploy
 
-## 📷 Screenshots
+## Screenshots  
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/1.png" width="200" />
   <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/2.png" width="200" />
@@ -88,6 +89,7 @@ firebase deploy
   <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/5.png" width="200" />
   <img src="https://raw.githubusercontent.com/jatinrana331gm/Book-Library/main/screenshots/6.png" width="200" />
 </p>
+
 
 
 
